@@ -1,0 +1,1 @@
+/Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/em++  -Wall -Wreturn-type -Wmissing-declarations -Wno-unknown-pragmas -Wformat-truncation=0 @CMakeFiles/gdxwraptest.dir/objects1.rsp -o gdxwraptest.js @CMakeFiles/gdxwraptest.dir/linkLibs.rsp

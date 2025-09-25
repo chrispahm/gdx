@@ -1,0 +1,28 @@
+CMakeFiles/gdxwraptest.dir/generated/gdxcc.c.o: \
+  /Users/pahmeyer/Documents/GitHub/gdx/generated/gdxcc.c \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/stdio.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/wasi/api.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/lib/clang/17/include/stddef.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/lib/clang/17/include/__stddef_max_align_t.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/lib/clang/17/include/stdint.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/stdint.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/bits/alltypes.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/bits/stdint.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/features.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/compat/stdlib.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/stdlib.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/alloca.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/compat/string.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/string.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/strings.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/assert.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/compat/ctype.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/ctype.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/errno.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/bits/errno.h \
+  /Users/pahmeyer/Documents/GitHub/gdx/generated/gdxcc.h \
+  /Users/pahmeyer/Documents/GitHub/gdx/generated/gclgms.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/unistd.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/bits/posix.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/dlfcn.h \
+  /Users/pahmeyer/sciebo/Programmieren/emsdk/upstream/emscripten/cache/sysroot/include/sys/utsname.h

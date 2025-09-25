@@ -1,0 +1,7 @@
+/Users/pahmeyer/Documents/GitHub/gdx/CMakeFiles/gdxcclib64.dir
+/Users/pahmeyer/Documents/GitHub/gdx/CMakeFiles/gdxtest.dir
+/Users/pahmeyer/Documents/GitHub/gdx/CMakeFiles/gdxwraptest.dir
+/Users/pahmeyer/Documents/GitHub/gdx/CMakeFiles/xp_example1.dir
+/Users/pahmeyer/Documents/GitHub/gdx/CMakeFiles/xp_example2.dir
+/Users/pahmeyer/Documents/GitHub/gdx/CMakeFiles/edit_cache.dir
+/Users/pahmeyer/Documents/GitHub/gdx/CMakeFiles/rebuild_cache.dir
