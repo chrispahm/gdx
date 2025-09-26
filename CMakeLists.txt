@@ -2,6 +2,18 @@ cmake_minimum_required(VERSION 3.16)
 project(gdx)
 set(CMAKE_CXX_STANDARD 17)
 
+option(GDX_BUILD_WASM "Build WebAssembly module for the GDX reader" OFF)
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+	set(IS_EMSCRIPTEN TRUE)
+else()
+	set(IS_EMSCRIPTEN FALSE)
+endif()
+
+if (GDX_BUILD_WASM AND NOT IS_EMSCRIPTEN)
+	message(FATAL_ERROR "GDX_BUILD_WASM requires configuring the project with the Emscripten toolchain (use emcmake cmake ...)")
+endif ()
+
 # ccache and sccache
 if(NOT DEFINED CMAKE_C_COMPILER_LAUNCHER AND NOT DEFINED CMAKE_CXX_COMPILER_LAUNCHER)
 	find_program(CCACHE_FOUND ccache)
@@ -27,7 +39,11 @@ if(NOT DEFINED CMAKE_C_COMPILER_LAUNCHER AND NOT DEFINED CMAKE_CXX_COMPILER_LAUN
 	endif()
 endif()
 
-set(mylibs ${CMAKE_DL_LIBS} pthread m)
+if (IS_EMSCRIPTEN)
+	set(mylibs)
+else ()
+	set(mylibs ${CMAKE_DL_LIBS} pthread m)
+endif ()
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_SKIP_RPATH FALSE)
@@ -37,11 +53,11 @@ if ((APPLE OR CMAKE_C_COMPILER_ID STREQUAL "Clang") AND CMAKE_C_COMPILER_VERSION
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-non-prototype")
 endif ()
 
-if (APPLE)
+if (NOT IS_EMSCRIPTEN AND APPLE)
 	set(CMAKE_BUILD_RPATH @executable_path/.)
-else ()
+elseif (NOT IS_EMSCRIPTEN)
 	set(CMAKE_BUILD_RPATH $ORIGIN)
-endif (APPLE)
+endif ()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DGC_NO_MUTEX")
 
@@ -140,6 +156,12 @@ set(tests
 		src/tests/rtl/sysutilsp3tests.cpp
 )
 
-set(inc-dirs zlib src generated src/gdlib src/global src/rtl)
+set(inc-dirs zlib src generated src/gdlib src/global src/rtl src/wasm)
+
+if (GDX_BUILD_WASM)
+	set(NO_TESTS ON CACHE BOOL "" FORCE)
+	set(NO_EXAMPLES ON CACHE BOOL "" FORCE)
+	set(NO_TOOLS ON CACHE BOOL "" FORCE)
+endif ()
 
 include(targets.cmake)

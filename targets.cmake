@@ -1,23 +1,51 @@
 # Dynamic library / shared object
-add_library(gdxcclib64 SHARED ${gdx-core} generated/gdxcclib.cpp)
-if (UNIX)
-    target_compile_options(gdxcclib64 PRIVATE -fvisibility=hidden)
-endif ()
-target_include_directories(gdxcclib64 PRIVATE ${inc-dirs})
-if (APPLE)
-    set(cclib-link-options "-Bdynamic")
-elseif (UNIX) # Linux
-    set(cclib-link-options "-Bdynamic -Wl,-Bsymbolic")
-else () # Windows
-    set(cclib-link-options "")
-endif ()
-target_link_libraries(gdxcclib64 ${mylibs} ${cclib-link-options})
-set_property(TARGET gdxcclib64 PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-# Static library
+# Core static library (used by both native and WASM builds)
 add_library(gdx-static STATIC ${gdx-core})
 target_include_directories(gdx-static PRIVATE ${inc-dirs})
 set_property(TARGET gdx-static PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+if (GDX_BUILD_WASM)
+    add_executable(gdx-wasm
+        src/wasm/gdx_wasm_module.cpp
+    )
+    target_include_directories(gdx-wasm PRIVATE ${inc-dirs})
+    target_link_libraries(gdx-wasm PRIVATE gdx-static ${mylibs})
+
+    set(wasm_link_flags
+        "-sMODULARIZE=1"
+        "-sEXPORT_ES6=1"
+        "-sENVIRONMENT=web,worker,node"
+        "-sALLOW_MEMORY_GROWTH=1"
+        "-sFORCE_FILESYSTEM=1"
+        "-sNO_EXIT_RUNTIME=1"
+        "-sERROR_ON_UNDEFINED_SYMBOLS=0"
+    "-sEXPORTED_FUNCTIONS=['_malloc','_free']"
+    "-sEXPORTED_RUNTIME_METHODS=['UTF8ToString','stringToUTF8','lengthBytesUTF8','FS','cwrap']"
+    )
+    string (JOIN " " wasm_link_flags_str ${wasm_link_flags})
+    set_target_properties(gdx-wasm PROPERTIES
+        OUTPUT_NAME "gdx"
+        SUFFIX ".js"
+        LINK_FLAGS "${wasm_link_flags_str}"
+    )
+else ()
+    # Dynamic library / shared object
+    add_library(gdxcclib64 SHARED ${gdx-core} generated/gdxcclib.cpp)
+    if (UNIX)
+        target_compile_options(gdxcclib64 PRIVATE -fvisibility=hidden)
+    endif ()
+    target_include_directories(gdxcclib64 PRIVATE ${inc-dirs})
+    if (APPLE)
+        set(cclib-link-options "-Bdynamic")
+    elseif (UNIX) # Linux
+        set(cclib-link-options "-Bdynamic -Wl,-Bsymbolic")
+    else () # Windows
+        set(cclib-link-options "")
+    endif ()
+    target_link_libraries(gdxcclib64 ${mylibs} ${cclib-link-options})
+    set_property(TARGET gdxcclib64 PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+endif ()
 
 set(NO_TESTS OFF CACHE BOOL "Skip building unit tests")
 if(NOT NO_TESTS)

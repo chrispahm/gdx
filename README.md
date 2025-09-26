@@ -5,13 +5,14 @@
 ## Table of Contents
 
 * [GAMS Data eXchange (GDX)](#gams-data-exchange-gdx)
-    * [Basic information on GDX file format](#basic-information-on-gdx-file-format)
-        * [Information contained inside a GDX file](#information-contained-inside-a-gdx-file)
-        * [Features of the GDX API](#features-of-the-gdx-api)
-    * [Setting up and building GDX](#setting-up-and-building-gdx)
-        * [Accessing GDX from a custom application](#accessing-gdx-from-a-custom-application)
-        * [Building GDX from source](#building-gdx-from-source)
-    * [Reference documentation](#reference-documentation)
+  * [Basic information on GDX file format](#basic-information-on-gdx-file-format)
+    * [Information contained inside a GDX file](#information-contained-inside-a-gdx-file)
+    * [Features of the GDX API](#features-of-the-gdx-api)
+  * [Setting up and building GDX](#setting-up-and-building-gdx)
+    * [Accessing GDX from a custom application](#accessing-gdx-from-a-custom-application)
+    * [Building GDX from source](#building-gdx-from-source)
+    * [WebAssembly demo and smoke test](#webassembly-demo-and-smoke-test)
+  * [Reference documentation](#reference-documentation)
     * [Introduction into using GDX API](#introduction-into-using-gdx-api)
         * [Writing data to a GDX file](#writing-data-to-a-gdx-file)
         * [Writing data using strings](#writing-data-using-strings)
@@ -159,6 +160,64 @@ in this repo (as file and submodule respectively).
 - C++17 compiler (e.g. [GCC](https://gcc.gnu.org/), [clang](https://clang.llvm.org/),
   [MSVC](https://visualstudio.microsoft.com/),
   [Intel C++](https://www.intel.com/content/www/us/en/developer/tools/oneapi/dpc-compiler.html#gs.12zqsa))
+
+### WebAssembly demo and smoke test
+
+The repository ships with a minimal WebAssembly build that exposes the read-only parts of the GDX API and a small
+browser demo for exploring `.gdx` files without any native dependencies.
+
+#### Prerequisites
+
+* [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html) 3.1+ (activate via `emsdk install latest`
+  followed by `emsdk activate latest` and sourcing `emsdk_env.sh`/`emsdk_env.bat`).
+* Node.js 18+ for the automated smoke test (uses native ES modules).
+
+#### Build steps
+
+1. Configure the WebAssembly target (run inside the repository root):
+
+  ```bash
+  emcmake cmake -S . -B build-wasm -DGDX_BUILD_WASM=ON -DNO_TESTS=ON -DNO_EXAMPLES=ON -DNO_TOOLS=ON
+  ```
+
+1. Build the bindings and demo artifacts:
+
+  ```bash
+  cmake --build build-wasm --target gdx-wasm
+  ```
+
+The output `build-wasm/gdx.js` and `build-wasm/gdx.wasm` (plus accompanying `.data` files if generated) can be copied to
+`src/wasm/demo/` for use in the demo UI or served directly via HTTP.
+
+#### Running the browser demo
+
+1. Copy the build artifacts into the demo folder (or configure your HTTP server to serve `build-wasm/` alongside
+  `src/wasm/demo/`).
+2. Start any static file server rooted at `src/wasm/demo/` (for example `python -m http.server 8000`).
+3. Open `http://localhost:8000/index.html` in a modern browser, choose a `.gdx` file, and stream symbol records using the
+  UI controls.
+
+The frontend uses vanilla ES modules and relies on the Emscripten-generated `gdx.js` loader; no bundler is required.
+
+#### Node.js smoke test
+
+To verify the WebAssembly module headlessly, run the provided Node.js script after building:
+
+```bash
+node tools/wasm_smoke_test.mjs path/to/your-file.gdx
+```
+
+The script loads `build-wasm/gdx.js`, streams the first symbol, and prints a few sample records. A non-zero exit code or
+an exception indicates that the WASM bindings could not be initialized or the provided `.gdx` file failed to load.
+
+#### Troubleshooting tips
+
+* If you receive `ReferenceError: document is not defined` while running the smoke test, ensure the module was built with
+  `-sENVIRONMENT=worker,node` (this flag is set automatically when `GDX_BUILD_WASM` is enabled in CMake).
+* Out-of-memory errors during large file loads can be mitigated by rebuilding with
+  `-sALLOW_MEMORY_GROWTH=1` (already part of the default configuration).
+* Re-run `cmake --build build-wasm` whenever you update the C++ bindings or JavaScript helpers; `gdx.js` re-exports the
+  latest interface automatically.
 
 ## Reference documentation
 
