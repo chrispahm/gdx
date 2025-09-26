@@ -28,6 +28,7 @@
 #pragma once
 
 #include "gxfile.hpp"
+#include "gdx_random_access.h"
 
 namespace gdx
 {
@@ -216,7 +217,7 @@ double AcronymRemap( double V );
 bool IsGoodNewSymbol( const char *s );
 bool ResultWillBeSorted( const int *ADomainNrs ) const;
 
-int gdxOpenReadXX( const char *Afn, int filemode, int ReadMode, int &ErrNr );
+int gdxOpenReadXX( const char *Afn, int filemode, int ReadMode, int &ErrNr, const gdx_random_access *randomSource = nullptr );
 
 // This one is a helper function for a callback from a Fortran client
 void gdxGetDomainElements_DP_FC( int RawIndex, int MappedIndex, void *Uptr );

@@ -2,9 +2,11 @@
 /gdx.vcxproj.user
 /out/
 /build/
+/build-wasm/
 /x64/
 /gdx/x64/
 /cmake-build-*/
+/CMakeFiles/
 .idea/
 .vs/
 .vscode/
@@ -20,3 +22,9 @@
 /src/__pycache__
 /venv/
 /docs/html/
+cmake_install.cmake
+CMakeCache.txt
+Makefile
+libgdx-static.a
+libgdxcclib64.dylib
+/.venv/

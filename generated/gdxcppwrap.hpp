@@ -416,6 +416,16 @@ public:
      return ::gdxOpenReadEx( pgx, FileName, ReadMode, &ErrNr );
    }
 
+   int gdxOpenReadFromRandomAccess( const gdx_random_access *Source, int &ErrNr )
+   {
+     return ::gdxOpenReadFromRandomAccess( pgx, Source, &ErrNr );
+   }
+
+   int gdxOpenReadFromRandomAccessEx( const gdx_random_access *Source, int ReadMode, int &ErrNr )
+   {
+     return ::gdxOpenReadFromRandomAccessEx( pgx, Source, ReadMode, &ErrNr );
+   }
+
    int gdxOpenWrite( const char *FileName, const char *Producer, int &ErrNr )
    {
      return ::gdxOpenWrite( pgx, FileName, Producer, &ErrNr );

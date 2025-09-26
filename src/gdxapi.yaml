@@ -12,7 +12,7 @@ USE_XXXLOADPATH : true
 MaxDimStyle     : gdx
 
 UseCD            : True
-extracUse        : '#include "gdxcwrap.h"'
+extracUse        : '#include "gdxcwrap.h"\n#include "gdx_random_access.h"'
 clibuse          : True
 NOFORTRANCB      : False
 
@@ -967,6 +967,35 @@ functions:
           if(ErrNr) {
              [...]
           }
+  - gdxOpenReadFromRandomAccess:
+      type: int
+      parameters:
+      - Source:
+          type: cRA
+          description: Random-access provider describing the underlying byte stream.
+      - ErrNr:
+          type: Oint
+          description: Returns an error code or zero if there is no error.
+      description: Open a GDX file for reading using a caller-provided random-access backend. Non-zero if the source can be opened, zero otherwise.
+      return: Returns non-zero if the random-access source can be used; zero otherwise.
+      details: '<p>Use this overload when the data resides outside the local filesystem (e.g., memory buffers, network fetchers). The callback suite provided via <code>gdx_random_access</code> is responsible for supplying bytes on demand.</p><p><b>See: </b><a href="#gdxOpenRead">gdxOpenRead</a>, <a href="#gdxOpenReadFromRandomAccessEx">gdxOpenReadFromRandomAccessEx</a>.</p>'
+      group: File (Open/Close)
+  - gdxOpenReadFromRandomAccessEx:
+      type: int
+      parameters:
+      - Source:
+          type: cRA
+          description: Random-access provider describing the underlying byte stream.
+      - ReadMode:
+          type: int
+          description: 'Bitmap skip reading sections: 0-bit: string (1 skip reading string).'
+      - ErrNr:
+          type: Oint
+          description: Returns an error code or zero if there is no error.
+      description: Open a GDX file for reading from a random-access provider allowing for skipping sections. Non-zero if the source can be opened, zero otherwise.
+      return: Returns non-zero if the random-access source can be used; zero otherwise.
+      details: '<p>Equivalent to <code>gdxOpenReadEx</code> but works with a generic <code>gdx_random_access</code> provider.</p><p><b>See: </b><a href="#gdxOpenReadFromRandomAccess">gdxOpenReadFromRandomAccess</a>, <a href="#gdxOpenReadEx">gdxOpenReadEx</a>.</p>'
+      group: File (Open/Close)
   - gdxOpenWrite:
       type: int
       parameters:

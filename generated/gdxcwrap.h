@@ -128,6 +128,8 @@ int gdxMapValue( TGXFileRec_t *pgdx, double D, int *sv );
 int gdxOpenAppend( TGXFileRec_t *pgdx, const char *FileName, const char *Producer, int *ErrNr );
 int gdxOpenRead( TGXFileRec_t *pgdx, const char *FileName, int *ErrNr );
 int gdxOpenReadEx( TGXFileRec_t *pgdx, const char *FileName, int ReadMode, int *ErrNr );
+int gdxOpenReadFromRandomAccess( TGXFileRec_t *pgdx, const gdx_random_access *Source, int *ErrNr );
+int gdxOpenReadFromRandomAccessEx( TGXFileRec_t *pgdx, const gdx_random_access *Source, int ReadMode, int *ErrNr );
 int gdxOpenWrite( TGXFileRec_t *pgdx, const char *FileName, const char *Producer, int *ErrNr );
 int gdxOpenWriteEx( TGXFileRec_t *pgdx, const char *FileName, const char *Producer, int Compr, int *ErrNr );
 int gdxResetSpecialValues( TGXFileRec_t *pgdx);
@@ -494,6 +496,16 @@ GDX_INLINE int gdxOpenRead( TGXFileRec_t *pgx, const char *FileName, int *ErrNr 
 GDX_INLINE int gdxOpenReadEx( TGXFileRec_t *pgx, const char *FileName, int ReadMode, int *ErrNr )
 {
    return reinterpret_cast<gdx::TGXFileObj *>( pgx )->gdxOpenReadEx(FileName, ReadMode, *ErrNr );
+}
+
+GDX_INLINE int gdxOpenReadFromRandomAccess( TGXFileRec_t *pgx, const gdx_random_access *Source, int *ErrNr )
+{
+   return reinterpret_cast<gdx::TGXFileObj *>( pgx )->gdxOpenReadFromRandomAccess(Source, *ErrNr );
+}
+
+GDX_INLINE int gdxOpenReadFromRandomAccessEx( TGXFileRec_t *pgx, const gdx_random_access *Source, int ReadMode, int *ErrNr )
+{
+   return reinterpret_cast<gdx::TGXFileObj *>( pgx )->gdxOpenReadFromRandomAccessEx(Source, ReadMode, *ErrNr );
 }
 
 GDX_INLINE int gdxOpenWrite( TGXFileRec_t *pgx, const char *FileName, const char *Producer, int *ErrNr )

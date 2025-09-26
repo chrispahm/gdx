@@ -32,6 +32,8 @@
 #include <cstdlib>               // for malloc, abs, free
 #include <cstring>               // for memcpy, strerror
 #include <functional>            // for function
+#include <limits>                // for numeric_limits
+#include <new>                   // for bad_alloc
 #include <stdexcept>             // for runtime_error
 #include <string>                // for basic_string, string, operator+, ope...
 #include <utility>               // for move
@@ -58,6 +60,50 @@ using namespace utils;
 // ==============================================================================================================
 namespace gdlib::gmsstrm
 {
+
+namespace
+{
+
+class CallbackRandomAccessProvider final : public RandomAccessProvider
+{
+   gdx_random_access Callbacks {};
+   bool closed {};
+
+public:
+   explicit CallbackRandomAccessProvider( const gdx_random_access &cb ) : Callbacks { cb } {}
+   ~CallbackRandomAccessProvider() override { Close(); }
+
+   bool ReadAt( uint64_t offset, void *dst, size_t requested, size_t &out_read ) override
+   {
+      out_read = 0;
+      if( !Callbacks.read_at ) return false;
+      size_t actual {};
+      if( !Callbacks.read_at( Callbacks.user_data, offset, dst, requested, &actual ) ) return false;
+      out_read = actual;
+      if( out_read > requested ) out_read = requested;
+      return true;
+   }
+
+   bool GetSize( uint64_t &out_size ) override
+   {
+      if( !Callbacks.get_size ) return false;
+      return Callbacks.get_size( Callbacks.user_data, &out_size ) != 0;
+   }
+
+   void Close() noexcept override
+   {
+      if( closed ) return;
+      closed = true;
+      if( Callbacks.close ) Callbacks.close( Callbacks.user_data );
+   }
+};
+
+}// namespace
+
+std::unique_ptr<RandomAccessProvider> MakeRandomAccessProvider( const gdx_random_access &callbacks )
+{
+   return std::make_unique<CallbackRandomAccessProvider>( callbacks );
+}
 
 std::string SysErrorMessage( int errorCode )
 {
@@ -788,6 +834,274 @@ bool TBufferedFileStream::GetCompression() const { return FCompress; }
 
 bool TBufferedFileStream::GetCanCompress() const { return FCanCompress; }
 
+int64_t TBufferedFileStream::Size() { return GetSize(); }
+
+
+TRandomAccessBufferedStream::TRandomAccessBufferedStream( std::unique_ptr<RandomAccessProvider> provider, std::string debugName )
+      : Provider { std::move( provider ) },
+         ProviderName { std::move( debugName ) },
+      BufSize { BufferSize },
+      CBufSize { utils::round<uint32_t>( static_cast<double>( BufferSize ) * 12.0 / 10.0 ) + 20 },
+      BufPtr( BufferSize ),
+      CBufPtr { static_cast<PCompressBuffer>( std::malloc( sizeof( TCompressHeader ) + CBufSize ) ) }
+{
+   if( !Provider ) throw std::invalid_argument( "TRandomAccessBufferedStream requires a provider" );
+   if( !CBufPtr ) throw std::bad_alloc();
+}
+
+TRandomAccessBufferedStream::~TRandomAccessBufferedStream()
+{
+   std::free( CBufPtr );
+   if( Provider ) Provider->Close();
+}
+
+bool TRandomAccessBufferedStream::ReadRaw( void *buffer, uint32_t count, uint32_t &outRead )
+{
+   outRead = 0;
+   if( !Provider ) return false;
+   size_t actual {};
+   if( !Provider->ReadAt( ProviderPos, buffer, count, actual ) )
+   {
+      LastIOResult = strmErrorIOResult;
+      outRead = static_cast<uint32_t>( std::min<size_t>( actual, std::numeric_limits<uint32_t>::max() ) );
+      return false;
+   }
+   ProviderPos += actual;
+   outRead = static_cast<uint32_t>( std::min<size_t>( actual, std::numeric_limits<uint32_t>::max() ) );
+   return true;
+}
+
+bool TRandomAccessBufferedStream::FillBuffer()
+{
+   if( !FCompress )
+   {
+      uint32_t bytesRead {};
+      ReadRaw( BufPtr.data(), BufSize, bytesRead );
+      NrLoaded = bytesRead;
+   }
+   else if( !FCanCompress )
+   {
+      NrLoaded = 0;
+      LastIOResult = -100044;
+   }
+   else
+   {
+      uint32_t headerRead {};
+      if( !ReadRaw( &CBufPtr->cxHeader, sizeof( TCompressHeader ), headerRead ) || headerRead < sizeof( TCompressHeader ) )
+      {
+         NrLoaded = 0;
+         return false;
+      }
+      const auto WLen = static_cast<uint32_t>( ( CBufPtr->cxHeader.cxB1 << 8 ) + CBufPtr->cxHeader.cxB2 );
+      if( !CBufPtr->cxHeader.cxTyp )
+      {
+         uint32_t dataRead {};
+         ReadRaw( BufPtr.data(), WLen, dataRead );
+         NrLoaded = dataRead;
+      }
+      else
+      {
+         uint32_t compressedRead {};
+         if( !ReadRaw( &CBufPtr->cxData, WLen, compressedRead ) || compressedRead != WLen )
+         {
+            NrLoaded = 0;
+            return false;
+         }
+         unsigned long XLen = BufSize;
+         const auto status = uncompress( BufPtr.data(), &XLen, &CBufPtr->cxData, WLen );
+         if( status != Z_OK )
+         {
+            LastIOResult = strmErrorZLib;
+            NrLoaded = 0;
+            return false;
+         }
+         NrLoaded = static_cast<uint32_t>( XLen );
+      }
+   }
+   NrRead = NrWritten = 0;
+   return NrLoaded > 0;
+}
+
+uint32_t TRandomAccessBufferedStream::Read( void *Buffer, uint32_t Count )
+{
+   if( NrWritten > 0 ) FlushBuffer();
+   if( Count <= NrLoaded - NrRead )
+   {
+      std::memcpy( Buffer, &BufPtr[NrRead], Count );
+      NrRead += Count;
+      return Count;
+   }
+   auto *UsrPtr = static_cast<char *>( Buffer );
+   uint32_t UsrReadCnt = 0;
+   while( Count > 0 )
+   {
+      if( NrRead >= NrLoaded && !FillBuffer() ) break;
+      const uint32_t NrBytes = std::min( Count, NrLoaded - NrRead );
+      std::memcpy( &UsrPtr[UsrReadCnt], &BufPtr[NrRead], NrBytes );
+      NrRead += NrBytes;
+      UsrReadCnt += NrBytes;
+      Count -= NrBytes;
+   }
+   return UsrReadCnt;
+}
+
+uint32_t TRandomAccessBufferedStream::Write( const void *, uint32_t )
+{
+   LastIOResult = strmErrorIOResult;
+   throw std::runtime_error( "Random access streams are read-only" );
+}
+
+char TRandomAccessBufferedStream::ReadCharacter()
+{
+   if( NrWritten > 0 ) FlushBuffer();
+   if( NrRead >= NrLoaded && !FillBuffer() ) return substChar;
+   return static_cast<char>( BufPtr[NrRead++] );
+}
+
+bool TRandomAccessBufferedStream::FlushBuffer()
+{
+   if( !NrWritten ) return true;
+   LastIOResult = strmErrorIOResult;
+   NrWritten = 0;
+   return false;
+}
+
+bool TRandomAccessBufferedStream::IsEof()
+{
+   if( NrRead < NrLoaded ) return false;
+   const auto pos = GetPosition();
+   const auto size = GetSize();
+   if( size < 0 ) return true;
+   return pos >= size;
+}
+
+void TRandomAccessBufferedStream::SetCompression( bool V )
+{
+   if( ( FCompress || V ) && NrWritten > 0 ) FlushBuffer();
+   if( FCompress != V )
+      NrLoaded = NrRead = 0;
+   FCompress = V;
+}
+
+bool TRandomAccessBufferedStream::GetCompression() const { return FCompress; }
+
+bool TRandomAccessBufferedStream::GetCanCompress() const { return FCanCompress; }
+
+int TRandomAccessBufferedStream::GetLastIOResult()
+{
+   const int res { LastIOResult };
+   LastIOResult = 0;
+   return res;
+}
+
+int64_t TRandomAccessBufferedStream::GetPosition()
+{
+   if( NrWritten > 0 ) return static_cast<int64_t>( ProviderPos + NrWritten );
+   const auto offset = static_cast<int64_t>( NrLoaded ) - static_cast<int64_t>( NrRead );
+   return static_cast<int64_t>( ProviderPos ) - offset;
+}
+
+void TRandomAccessBufferedStream::SetPosition( int64_t p )
+{
+   if( NrWritten > 0 )
+   {
+      FlushBuffer();
+      throw std::runtime_error( "Cannot reposition while write buffer pending" );
+   }
+   if( NrLoaded > 0 && !FCompress )
+   {
+      const auto startOfBuf = static_cast<int64_t>( ProviderPos ) - static_cast<int64_t>( NrLoaded );
+      if( p >= startOfBuf && p < static_cast<int64_t>( ProviderPos ) )
+      {
+         NrRead = static_cast<uint32_t>( p - startOfBuf );
+         return;
+      }
+   }
+   ProviderPos = static_cast<uint64_t>( std::max<int64_t>( 0, p ) );
+   NrLoaded = NrRead = 0;
+}
+
+int64_t TRandomAccessBufferedStream::GetSize()
+{
+   if( ProviderSize ) return static_cast<int64_t>( *ProviderSize );
+   if( !Provider ) return -1;
+   uint64_t size {};
+   if( !Provider->GetSize( size ) )
+   {
+      LastIOResult = strmErrorIOResult;
+      return -1;
+   }
+   ProviderSize = size;
+   return static_cast<int64_t>( size );
+}
+
+class TMiBufferedStream::Backend
+{
+public:
+   virtual ~Backend() = default;
+   virtual uint32_t Read( void *Buffer, uint32_t Count ) = 0;
+   virtual uint32_t Write( const void *Buffer, uint32_t Count ) = 0;
+   virtual char ReadCharacter() = 0;
+   virtual bool FlushBuffer() = 0;
+   virtual bool IsEof() = 0;
+   virtual void SetCompression( bool V ) = 0;
+   virtual bool GetCompression() const = 0;
+   virtual bool GetCanCompress() const = 0;
+   virtual int64_t GetPosition() = 0;
+   virtual void SetPosition( int64_t p ) = 0;
+   virtual int64_t GetSize() = 0;
+   virtual int GetLastIOResult() = 0;
+   virtual std::string FileName() const = 0;
+};
+
+class TMiBufferedStreamFileBackend final : public TMiBufferedStream::Backend
+{
+   std::unique_ptr<TBufferedFileStream> Stream;
+
+public:
+   TMiBufferedStreamFileBackend( const std::string &FileName, uint16_t Mode )
+       : Stream { std::make_unique<TBufferedFileStream>( FileName, Mode ) }
+   {}
+
+   uint32_t Read( void *Buffer, uint32_t Count ) override { return Stream->Read( Buffer, Count ); }
+   uint32_t Write( const void *Buffer, uint32_t Count ) override { return Stream->Write( Buffer, Count ); }
+   char ReadCharacter() override { return Stream->ReadCharacter(); }
+   bool FlushBuffer() override { return Stream->FlushBuffer(); }
+   bool IsEof() override { return Stream->IsEof(); }
+   void SetCompression( bool V ) override { Stream->SetCompression( V ); }
+   bool GetCompression() const override { return Stream->GetCompression(); }
+   bool GetCanCompress() const override { return Stream->GetCanCompress(); }
+   int64_t GetPosition() override { return Stream->GetPosition(); }
+   void SetPosition( int64_t p ) override { Stream->SetPosition( p ); }
+   int64_t GetSize() override { return Stream->Size(); }
+   int GetLastIOResult() override { return Stream->GetLastIOResult(); }
+   std::string FileName() const override { return Stream->GetFileName(); }
+};
+
+class TMiBufferedStreamRandomAccessBackend final : public TMiBufferedStream::Backend
+{
+   std::unique_ptr<TRandomAccessBufferedStream> Stream;
+
+public:
+   explicit TMiBufferedStreamRandomAccessBackend( std::unique_ptr<RandomAccessProvider> provider, std::string debugName )
+       : Stream { std::make_unique<TRandomAccessBufferedStream>( std::move( provider ), std::move( debugName ) ) }
+   {}
+
+   uint32_t Read( void *Buffer, uint32_t Count ) override { return Stream->Read( Buffer, Count ); }
+   uint32_t Write( const void *Buffer, uint32_t Count ) override { return Stream->Write( Buffer, Count ); }
+   char ReadCharacter() override { return Stream->ReadCharacter(); }
+   bool FlushBuffer() override { return Stream->FlushBuffer(); }
+   bool IsEof() override { return Stream->IsEof(); }
+   void SetCompression( bool V ) override { Stream->SetCompression( V ); }
+   bool GetCompression() const override { return Stream->GetCompression(); }
+   bool GetCanCompress() const override { return Stream->GetCanCompress(); }
+   int64_t GetPosition() override { return Stream->GetPosition(); }
+   void SetPosition( int64_t p ) override { Stream->SetPosition( p ); }
+   int64_t GetSize() override { return Stream->GetSize(); }
+   int GetLastIOResult() override { return Stream->GetLastIOResult(); }
+   std::string FileName() const override { return Stream->DebugName(); }
+};
+
 
 void TMiBufferedStream::DetermineByteOrder()
 {
@@ -796,12 +1110,15 @@ void TMiBufferedStream::DetermineByteOrder()
    initOrderCommon<double>( order_double, size_double, PAT_DOUBLE );
 }
 
-TMiBufferedStream::TMiBufferedStream( const std::string &FileName, uint16_t Mode ) : TBufferedFileStream { FileName, Mode }
+TMiBufferedStream::TMiBufferedStream( const std::string &FileName, uint16_t Mode )
+    : usingRandomAccess { false },
+      backend { std::make_unique<TMiBufferedStreamFileBackend>( FileName, Mode ) }
 {
-   if( FLastIOResult ) return;
-   if( Mode != FileAccessMode::fmCreate ) DetermineByteOrder();// we cannot update a mixed environment file!
+   initialIoError = backend->GetLastIOResult();
+   if( initialIoError ) return;
+   if( Mode != FileAccessMode::fmCreate ) DetermineByteOrder();
    else
-   {// avoid using writebyte so Paranoid flag works
+   {
       uint8_t B = sizeof( uint16_t );
       Write( &B, sizeof( uint8_t ) );
       const uint16_t W = PAT_WORD;
@@ -818,6 +1135,97 @@ TMiBufferedStream::TMiBufferedStream( const std::string &FileName, uint16_t Mode
    TDoubleVar X {};
    X.V = 1.0;
    NormalOrder = !X.VA.front();
+}
+
+TMiBufferedStream::TMiBufferedStream( std::unique_ptr<RandomAccessProvider> provider, std::string debugName )
+      : usingRandomAccess { true },
+         backend { std::make_unique<TMiBufferedStreamRandomAccessBackend>( std::move( provider ), std::move( debugName ) ) }
+{
+   initialIoError = backend->GetLastIOResult();
+   if( initialIoError ) return;
+   DetermineByteOrder();
+   TDoubleVar X {};
+   X.V = 1.0;
+   NormalOrder = !X.VA.front();
+}
+
+TMiBufferedStream::~TMiBufferedStream() = default;
+
+uint32_t TMiBufferedStream::Read( void *Buffer, uint32_t Count )
+{
+   if( !backend ) return 0;
+   return backend->Read( Buffer, Count );
+}
+
+uint32_t TMiBufferedStream::Write( const void *Buffer, uint32_t Count )
+{
+   if( !backend ) return 0;
+   return backend->Write( Buffer, Count );
+}
+
+int64_t TMiBufferedStream::GetPosition()
+{
+   if( !backend ) return 0;
+   return backend->GetPosition();
+}
+
+void TMiBufferedStream::SetPosition( int64_t p )
+{
+   if( backend ) backend->SetPosition( p );
+}
+
+int64_t TMiBufferedStream::GetSize()
+{
+   if( !backend ) return 0;
+   return backend->GetSize();
+}
+
+bool TMiBufferedStream::FlushBuffer()
+{
+   return backend && backend->FlushBuffer();
+}
+
+char TMiBufferedStream::ReadCharacter()
+{
+   if( !backend ) return substChar;
+   return backend->ReadCharacter();
+}
+
+bool TMiBufferedStream::IsEof()
+{
+   return backend && backend->IsEof();
+}
+
+void TMiBufferedStream::SetCompression( bool V )
+{
+   if( backend ) backend->SetCompression( V );
+}
+
+bool TMiBufferedStream::GetCompression() const
+{
+   return backend && backend->GetCompression();
+}
+
+bool TMiBufferedStream::GetCanCompress() const
+{
+   return backend && backend->GetCanCompress();
+}
+
+std::string TMiBufferedStream::GetFileName() const
+{
+   if( !backend ) return {};
+   return backend->FileName();
+}
+
+int TMiBufferedStream::GetLastIOResult()
+{
+   if( initialIoError )
+   {
+      const auto tmp = initialIoError;
+      initialIoError = 0;
+      return tmp;
+   }
+   return backend ? backend->GetLastIOResult() : strmErrorIOResult;
 }
 
 //note: this only works when src and dest point to different areas

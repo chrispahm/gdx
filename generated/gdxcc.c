@@ -1016,6 +1016,36 @@ int  GDX_CALLCONV d_gdxOpenReadEx (gdxHandle_t pgdx, const char *FileName, int R
   printAndReturn(gdxOpenReadEx,3,int )
 }
 
+/** Open a GDX file for reading using a caller-provided random-access backend. Non-zero if the source can be opened, zero otherwise.
+ * @param pgdx gdx object handle
+ * @param Source Random-access provider describing the underlying byte stream.
+ * @param ErrNr Returns an error code or zero if there is no error.
+ */
+int  GDX_CALLCONV d_gdxOpenReadFromRandomAccess (gdxHandle_t pgdx, const gdx_random_access *Source, int *ErrNr)
+{
+  int d_s[]={3,1,4};
+  GAMS_UNUSED(pgdx)
+  GAMS_UNUSED(Source)
+  GAMS_UNUSED(ErrNr)
+  printAndReturn(gdxOpenReadFromRandomAccess,2,int )
+}
+
+/** Open a GDX file for reading from a random-access provider allowing for skipping sections. Non-zero if the source can be opened, zero otherwise.
+ * @param pgdx gdx object handle
+ * @param Source Random-access provider describing the underlying byte stream.
+ * @param ReadMode Bitmap skip reading sections: 0-bit: string (1 skip reading string).
+ * @param ErrNr Returns an error code or zero if there is no error.
+ */
+int  GDX_CALLCONV d_gdxOpenReadFromRandomAccessEx (gdxHandle_t pgdx, const gdx_random_access *Source, int ReadMode, int *ErrNr)
+{
+  int d_s[]={3,1,3,4};
+  GAMS_UNUSED(pgdx)
+  GAMS_UNUSED(Source)
+  GAMS_UNUSED(ReadMode)
+  GAMS_UNUSED(ErrNr)
+  printAndReturn(gdxOpenReadFromRandomAccessEx,3,int )
+}
+
 /** Open a new GDX file for output. Non-zero if the file can be opened, zero otherwise.
  * @param pgdx gdx object handle
  * @param FileName File name of the GDX file to be created with arbitrary length.
@@ -1867,6 +1897,8 @@ XLibraryLoad (const char *dllName, char *errBuf, int errBufSize)
   {int s[]={3,11,11,4}; CheckAndLoad(gdxOpenAppend,3,"C__"); }
   {int s[]={3,11,4}; CheckAndLoad(gdxOpenRead,2,"C__"); }
   {int s[]={3,11,3,4}; CheckAndLoad(gdxOpenReadEx,3,"C__"); }
+  {int s[]={3,1,4}; CheckAndLoad(gdxOpenReadFromRandomAccess,2,"C__"); }
+  {int s[]={3,1,3,4}; CheckAndLoad(gdxOpenReadFromRandomAccessEx,3,"C__"); }
   {int s[]={3,11,11,4}; CheckAndLoad(gdxOpenWrite,3,"C__"); }
   {int s[]={3,11,11,3,4}; CheckAndLoad(gdxOpenWriteEx,4,"C__"); }
   {int s[]={3}; CheckAndLoad(gdxResetSpecialValues,0,"C__"); }

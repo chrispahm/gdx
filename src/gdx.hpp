@@ -28,6 +28,7 @@
 #pragma once
 
 #include "gxfile.hpp"
+#include "gdx_random_access.h"
 
 namespace gdx
 {
@@ -524,6 +525,42 @@ public:
     * @see gdxOpenWrite, gdxGetLastError
     */
    int gdxOpenReadEx( const char *FileName, int ReadMode, int &ErrNr );
+
+   /**
+    * @brief Open a GDX file for reading using a caller-provided random-access backend. Non-zero if the source
+    *   can be opened, zero otherwise.
+    * @details Use this overload when the data resides outside the local filesystem (e.g., memory buffers, network
+    * fetchers). The callback suite provided via
+    * <code>
+    *  gdx_random_access
+    * </code>
+    * is responsible for supplying bytes on demand.
+    * @param Source Random-access provider describing the underlying byte stream.
+    * @param ErrNr Returns an error code or zero if there is no error.
+    * @return Returns non-zero if the random-access source can be used; zero otherwise.
+    * @see gdxOpenRead, gdxOpenReadFromRandomAccessEx
+    */
+   int gdxOpenReadFromRandomAccess( const gdx_random_access *Source, int &ErrNr );
+
+   /**
+    * @brief Open a GDX file for reading from a random-access provider allowing for skipping sections. Non-zero
+    *   if the source can be opened, zero otherwise.
+    * @details Equivalent to
+    * <code>
+    *  gdxOpenReadEx
+    * </code>
+    * but works with a generic
+    * <code>
+    *  gdx_random_access
+    * </code>
+    * provider.
+    * @param Source Random-access provider describing the underlying byte stream.
+    * @param ReadMode Bitmap skip reading sections: 0-bit: string (1 skip reading string).
+    * @param ErrNr Returns an error code or zero if there is no error.
+    * @return Returns non-zero if the random-access source can be used; zero otherwise.
+    * @see gdxOpenReadFromRandomAccess, gdxOpenReadEx
+    */
+   int gdxOpenReadFromRandomAccessEx( const gdx_random_access *Source, int ReadMode, int &ErrNr );
 
    /**
     * @brief Open a new GDX file for output. Non-zero if the file can be opened, zero otherwise.
@@ -1840,7 +1877,7 @@ double AcronymRemap( double V );
 bool IsGoodNewSymbol( const char *s );
 bool ResultWillBeSorted( const int *ADomainNrs ) const;
 
-int gdxOpenReadXX( const char *Afn, int filemode, int ReadMode, int &ErrNr );
+int gdxOpenReadXX( const char *Afn, int filemode, int ReadMode, int &ErrNr, const gdx_random_access *randomSource = nullptr );
 
 // This one is a helper function for a callback from a Fortran client
 void gdxGetDomainElements_DP_FC( int RawIndex, int MappedIndex, void *Uptr );

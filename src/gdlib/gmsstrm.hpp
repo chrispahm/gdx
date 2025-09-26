@@ -30,10 +30,12 @@
 #include <cstdint>              // for uint32_t, uint8_t, int64_t, uint16_t
 #include <cstring>              // for strlen
 #include <memory>               // for unique_ptr
+#include <optional>             // for optional
 #include <string>               // for string, basic_string
 #include <string_view>          // for string_view
 #include <vector>               // for vector
 #include "../rtl/p3utils.hpp"     // for Tp3FileHandle
+#include "../gdx_random_access.h" // for gdx_random_access
 
 #if defined( NO_ZLIB )
 inline int uncompress( void *dest, unsigned long *destLen, const void *source, unsigned long sourceLen )
@@ -226,6 +228,19 @@ public:
    [[nodiscard]] std::string GetFileName() const;
 };
 
+class RandomAccessProvider
+{
+public:
+   virtual ~RandomAccessProvider() = default;
+   virtual bool ReadAt( uint64_t offset, void *dst, size_t requested, size_t &out_read ) = 0;
+   virtual bool GetSize( uint64_t &out_size ) = 0;
+   virtual void Close() noexcept = 0;
+};
+
+std::unique_ptr<RandomAccessProvider> MakeRandomAccessProvider( const gdx_random_access &callbacks );
+
+class TRandomAccessBufferedStream;
+
 struct TCompressHeader {
    // 0=no compression, 1=zlib
    uint8_t cxTyp;
@@ -265,16 +280,61 @@ public:
    [[nodiscard]] bool GetCompression() const;
    void SetCompression( bool V );
    [[nodiscard]] bool GetCanCompress() const;
+   [[nodiscard]] int64_t Size();
 
    int64_t GetPosition() override;
 
    void SetPosition( int64_t p ) override;
 };
 
+class TRandomAccessBufferedStream : public TXStream
+{
+   std::unique_ptr<RandomAccessProvider> Provider;
+   uint64_t ProviderPos {};
+   std::optional<uint64_t> ProviderSize;
+   std::string ProviderName;
+
+   uint32_t NrLoaded {}, NrRead {}, NrWritten {}, BufSize {}, CBufSize {};
+   std::vector<uint8_t> BufPtr;
+   PCompressBuffer CBufPtr {};
+   bool FCompress {}, FCanCompress { true };
+   int LastIOResult {};
+
+   bool FillBuffer();
+   bool ReadRaw( void *buffer, uint32_t count, uint32_t &outRead );
+
+public:
+   explicit TRandomAccessBufferedStream( std::unique_ptr<RandomAccessProvider> provider, std::string debugName = {} );
+   ~TRandomAccessBufferedStream() override;
+
+   uint32_t Read( void *Buffer, uint32_t Count ) override;
+   uint32_t Write( const void *Buffer, uint32_t Count ) override;
+   char ReadCharacter();
+   bool FlushBuffer();
+   bool IsEof();
+   void SetCompression( bool V );
+   [[nodiscard]] bool GetCompression() const;
+   [[nodiscard]] bool GetCanCompress() const;
+   int GetLastIOResult();
+   [[nodiscard]] const std::string &DebugName() const { return ProviderName; }
+
+   int64_t GetPosition() override;
+   void SetPosition( int64_t p ) override;
+   int64_t GetSize() override;
+};
+
 void reverseBytesMax8( const void *psrc, void *pdest, int sz );
 
-class TMiBufferedStream : public TBufferedFileStream
+class TMiBufferedStream : public TXStream
 {
+public:
+   class Backend;
+
+private:
+   int initialIoError {};
+   bool usingRandomAccess {};
+   std::unique_ptr<Backend> backend;
+
    uint8_t order_word {}, order_integer {}, order_double {}, size_word {}, size_integer {}, size_double {};
    bool NormalOrder {};
 
@@ -320,6 +380,25 @@ class TMiBufferedStream : public TBufferedFileStream
 
 public:
    TMiBufferedStream( const std::string &FileName, uint16_t Mode );
+   explicit TMiBufferedStream( std::unique_ptr<RandomAccessProvider> provider, std::string debugName = {} );
+   ~TMiBufferedStream() override;
+
+   uint32_t Read( void *Buffer, uint32_t Count ) override;
+   uint32_t Write( const void *Buffer, uint32_t Count ) override;
+   int64_t GetPosition() override;
+   void SetPosition( int64_t p ) override;
+   int64_t GetSize() override;
+
+   bool FlushBuffer();
+   char ReadCharacter();
+   bool IsEof();
+   void SetCompression( bool V );
+   [[nodiscard]] bool GetCompression() const;
+   [[nodiscard]] bool GetCanCompress() const;
+   [[nodiscard]] std::string GetFileName() const;
+   int GetLastIOResult();
+   [[nodiscard]] bool UsesRandomAccess() const { return usingRandomAccess; }
+
    static void ReverseBytes( void *psrc, void *pdest, int sz );
    [[nodiscard]] int GoodByteOrder() const;
    double ReadDouble() override;

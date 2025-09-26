@@ -73,6 +73,7 @@ def map_type_gen(func_ptrs, for_cpp=True):
                     vSVA='double *',
                     cSVA='const double *',
                     ptr='void *',
+                    cRA='const gdx_random_access *',
                     D='double',
                     int64='int64_t' if for_cpp else 'INT64')
 

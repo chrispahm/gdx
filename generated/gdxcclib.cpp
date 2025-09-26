@@ -32,6 +32,7 @@
 #include <assert.h>
 
 #include "gdxcwrap.h"
+#include "gdx_random_access.h"
 #include "gclgms.h"
 
 #if defined(_WIN32)
@@ -120,6 +121,8 @@
 #define C__gdxOpenAppend c__gdxopenappend
 #define C__gdxOpenRead c__gdxopenread
 #define C__gdxOpenReadEx c__gdxopenreadex
+#define C__gdxOpenReadFromRandomAccess c__gdxopenreadfromrandomaccess
+#define C__gdxOpenReadFromRandomAccessEx c__gdxopenreadfromrandomaccessex
 #define C__gdxOpenWrite c__gdxopenwrite
 #define C__gdxOpenWriteEx c__gdxopenwriteex
 #define C__gdxResetSpecialValues c__gdxresetspecialvalues
@@ -702,6 +705,16 @@ GDX_API int GDX_CALLCONV C__XCheck(const char *funcn, int ClNrArg, int Clsign[],
   else if(!strcmp(funcn,"gdxOpenReadEx"))
   {
     DLLsign[0] = 3;DLLsign[1] = 11;DLLsign[2] = 3;DLLsign[3] = 4;
+    return CheckSign(funcn,3,ClNrArg,DLLsign,Clsign,Msg);
+  }
+  else if(!strcmp(funcn,"gdxOpenReadFromRandomAccess"))
+  {
+    DLLsign[0] = 3;DLLsign[1] = 1;DLLsign[2] = 4;
+    return CheckSign(funcn,2,ClNrArg,DLLsign,Clsign,Msg);
+  }
+  else if(!strcmp(funcn,"gdxOpenReadFromRandomAccessEx"))
+  {
+    DLLsign[0] = 3;DLLsign[1] = 1;DLLsign[2] = 3;DLLsign[3] = 4;
     return CheckSign(funcn,3,ClNrArg,DLLsign,Clsign,Msg);
   }
   else if(!strcmp(funcn,"gdxOpenWrite"))
@@ -1288,6 +1301,18 @@ GDX_API int GDX_CALLCONV C__gdxOpenReadEx(TGXFileRec_t *TGXFile, const char *Fil
 GDX_API int GDX_CALLCONV C__gdxOpenReadEx(TGXFileRec_t *TGXFile, const char *FileName, int ReadMode, int *ErrNr)
 {
   return gdxOpenReadEx(TGXFile, FileName, ReadMode, ErrNr);
+}
+
+GDX_API int GDX_CALLCONV C__gdxOpenReadFromRandomAccess(TGXFileRec_t *TGXFile, const gdx_random_access *Source, int *ErrNr);
+GDX_API int GDX_CALLCONV C__gdxOpenReadFromRandomAccess(TGXFileRec_t *TGXFile, const gdx_random_access *Source, int *ErrNr)
+{
+  return gdxOpenReadFromRandomAccess(TGXFile, Source, ErrNr);
+}
+
+GDX_API int GDX_CALLCONV C__gdxOpenReadFromRandomAccessEx(TGXFileRec_t *TGXFile, const gdx_random_access *Source, int ReadMode, int *ErrNr);
+GDX_API int GDX_CALLCONV C__gdxOpenReadFromRandomAccessEx(TGXFileRec_t *TGXFile, const gdx_random_access *Source, int ReadMode, int *ErrNr)
+{
+  return gdxOpenReadFromRandomAccessEx(TGXFile, Source, ReadMode, ErrNr);
 }
 
 GDX_API int GDX_CALLCONV C__gdxOpenWrite(TGXFileRec_t *TGXFile, const char *FileName, const char *Producer, int *ErrNr);

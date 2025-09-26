@@ -45,6 +45,12 @@ endif (APPLE)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DGC_NO_MUTEX")
 
+set(GDX_ENABLE_WASM_RANDOM_ACCESS_DEFAULT OFF)
+if(EMSCRIPTEN)
+	set(GDX_ENABLE_WASM_RANDOM_ACCESS_DEFAULT ON)
+endif()
+option(GDX_ENABLE_WASM_RANDOM_ACCESS "Enable the WASM random access skeleton implementation" ${GDX_ENABLE_WASM_RANDOM_ACCESS_DEFAULT})
+
 if (MSVC OR CMAKE_HOST_WIN32 OR CMAKE_GENERATOR_TOOLSET STREQUAL "ClangCL")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W3 /D_CRT_SECURE_NO_WARNINGS /wd4267 /wd4996")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /EHs /D_CRT_SECURE_NO_WARNINGS /wd4267 /wd4996")
@@ -107,6 +113,8 @@ set(gdx-core
 		# gdlib essential units
 		src/gdlib/gmsstrm.cpp
 		src/gdlib/gmsstrm.hpp
+		src/gdlib/random_access_native.cpp
+		src/gdlib/random_access_native.hpp
 		src/gdlib/utils.hpp
 		src/gdlib/utils.cpp
 		src/gdlib/strutilx.hpp
@@ -121,6 +129,13 @@ set(gdx-core
 		${zlib-units}
 )
 
+if(EMSCRIPTEN AND GDX_ENABLE_WASM_RANDOM_ACCESS)
+	list(APPEND gdx-core
+		 src/gdlib/random_access_wasm.cpp
+		 src/gdlib/random_access_wasm.hpp
+	)
+endif()
+
 set(tests
 		src/tests/doctestmain.cpp
 
@@ -134,6 +149,7 @@ set(tests
 		src/tests/gdlib/strhashtests.cpp
 		src/tests/gdlib/strutilxtests.cpp
 		src/tests/gdlib/utilstests.cpp
+		src/tests/randomaccesstests.cpp
 
 		src/tests/rtl/p3iotests.cpp
 		src/tests/rtl/p3utilstests.cpp

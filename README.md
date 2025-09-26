@@ -1,5 +1,7 @@
 # GAMS Data eXchange (GDX)
 
+<!-- markdownlint-disable -->
+
 <!-- skip doxygen begin -->
 
 ## Table of Contents
@@ -20,8 +22,9 @@
         * [Reading data from a GDX file](#reading-data-from-a-gdx-file)
         * [Reading data using strings](#reading-data-using-strings)
         * [Reading data using integers (raw)](#reading-data-using-integers-raw)
-        * [Reading data using integers (Mapped)](#reading-data-using-integers-mapped)
-        * [Reading data using a filter](#reading-data-using-a-filter)
+    * [Reading data using random access providers](#reading-data-using-random-access-providers)
+  * [Reading data using integers (Mapped)](#reading-data-using-integers-mapped)
+  * [Reading data using a filter](#reading-data-using-a-filter)
         * [Dealing with acronyms](#dealing-with-acronyms)
     * [Functions by Category](#functions-by-category)
     * [Transition diagram](#transition-diagram)
@@ -451,6 +454,97 @@ returned using the integers we used when registering our elements. When we read 
 returned will be sorted with the first index position the most significant.
 
 After reading the data, we print the number of records that were skipped in the read routine.
+
+### Reading data using random access providers
+
+Some applications hold the contents of a GDX file outside the filesystem (for example after downloading it over HTTP or
+embedding it in memory). The `gdx_random_access` callbacks allow those scenarios to plug directly into
+`gdxOpenReadFromRandomAccess` without staging the bytes on disk. Implementations need to provide three small hooks:
+
+1. `read_at` copies up to `requested` bytes starting at the supplied offset and reports how many bytes were delivered
+  through `out_read`. Partial reads are allowed; the GDX loader will retry until the full span has been filled or a
+  failure is reported.
+2. `get_size` returns the logical length of the underlying data source.
+3. `close` performs optional cleanup (it can be `nullptr` when the caller retains ownership).
+
+The snippet below mirrors the in-memory test fixture that backs the doctest suite. It shows how to expose a memory
+buffer as a random-access provider and open it with the modern API. Once opened, all regular read helpers (symbol
+iteration, `gdxDataRead*`, filters, etc.) continue to work unchanged.
+
+```cpp
+#include "gdx_random_access.h"
+#include "gdx.hpp"
+
+#include <algorithm>
+#include <cstdint>
+#include <cstring>
+#include <stdexcept>
+#include <vector>
+
+struct BufferContext
+{
+  const std::vector<std::uint8_t> *blob {};
+};
+
+int BufferReadAt( void *userData, uint64_t offset, void *dst, size_t requested, size_t *out_read )
+{
+  auto *ctx = static_cast<BufferContext *>( userData );
+  if( !ctx || !ctx->blob || !out_read ) return 0;
+
+  const auto &data = *ctx->blob;
+  if( offset >= data.size() )
+  {
+    *out_read = 0;
+    return 1; // end of stream
+  }
+
+  const size_t available = data.size() - static_cast<size_t>( offset );
+  const size_t toCopy = std::min( requested, available );
+  std::memcpy( dst, data.data() + offset, toCopy );
+  *out_read = toCopy;
+  return 1;
+}
+
+int BufferGetSize( void *userData, uint64_t *out_size )
+{
+  auto *ctx = static_cast<BufferContext *>( userData );
+  if( !ctx || !ctx->blob || !out_size ) return 0;
+  *out_size = ctx->blob->size();
+  return 1;
+}
+
+gdx_random_access MakeRandomAccess( BufferContext &ctx )
+{
+  gdx_random_access provider {};
+  provider.user_data = &ctx;
+  provider.read_at = &BufferReadAt;
+  provider.get_size = &BufferGetSize;
+  provider.close = nullptr;
+  return provider;
+}
+
+void LoadGdxFromMemory( const std::vector<std::uint8_t> &blob )
+{
+  BufferContext ctx { &blob };
+  auto provider = MakeRandomAccess( ctx );
+
+  std::string errMsg;
+  TGXFileObj gdx { errMsg };
+  int errNr {};
+  if( !gdx.gdxOpenReadFromRandomAccess( &provider, errNr ) )
+    throw std::runtime_error( errMsg );
+
+  int numSymbols {}, numUels {};
+  gdx.gdxSystemInfo( numSymbols, numUels );
+  // Inspect symbols using gdxDataRead* as usual...
+
+  gdx.gdxClose();
+}
+```
+
+For projects that require additional background or browser-focused implementations, see
+[`docs/random_access.md`](docs/random_access.md). The same callback suite also powers `gdxOpenReadFromRandomAccessEx`
+when you need to pass advanced options such as UEL map sizes or case-sensitivity flags.
 
 ### Reading data using a filter
 

@@ -38,6 +38,8 @@
 
 #include "gclgms.h"
 
+#include "gdx_random_access.h"
+
 #if defined(_WIN32)
 # define GDX_CALLCONV __stdcall
 #else
@@ -200,6 +202,8 @@ int  GDX_CALLCONV d_gdxMapValue (gdxHandle_t pgdx, double D, int *sv);
 int  GDX_CALLCONV d_gdxOpenAppend (gdxHandle_t pgdx, const char *FileName, const char *Producer, int *ErrNr);
 int  GDX_CALLCONV d_gdxOpenRead (gdxHandle_t pgdx, const char *FileName, int *ErrNr);
 int  GDX_CALLCONV d_gdxOpenReadEx (gdxHandle_t pgdx, const char *FileName, int ReadMode, int *ErrNr);
+int  GDX_CALLCONV d_gdxOpenReadFromRandomAccess (gdxHandle_t pgdx, const gdx_random_access *Source, int *ErrNr);
+int  GDX_CALLCONV d_gdxOpenReadFromRandomAccessEx (gdxHandle_t pgdx, const gdx_random_access *Source, int ReadMode, int *ErrNr);
 int  GDX_CALLCONV d_gdxOpenWrite (gdxHandle_t pgdx, const char *FileName, const char *Producer, int *ErrNr);
 int  GDX_CALLCONV d_gdxOpenWriteEx (gdxHandle_t pgdx, const char *FileName, const char *Producer, int Compr, int *ErrNr);
 int  GDX_CALLCONV d_gdxResetSpecialValues (gdxHandle_t pgdx);
@@ -824,6 +828,27 @@ typedef int  (GDX_CALLCONV *gdxOpenReadEx_t) (gdxHandle_t pgdx, const char *File
  * @return Returns non-zero if the file can be opened; zero otherwise.
  */
 GDX_FUNCPTR(gdxOpenReadEx);
+
+typedef int  (GDX_CALLCONV *gdxOpenReadFromRandomAccess_t) (gdxHandle_t pgdx, const gdx_random_access *Source, int *ErrNr);
+/** Open a GDX file for reading using a caller-provided random-access backend. Non-zero if the source can be opened, zero otherwise.
+ *
+ * @param pgdx gdx object handle
+ * @param Source Random-access provider describing the underlying byte stream.
+ * @param ErrNr Returns an error code or zero if there is no error.
+ * @return Returns non-zero if the random-access source can be used; zero otherwise.
+ */
+GDX_FUNCPTR(gdxOpenReadFromRandomAccess);
+
+typedef int  (GDX_CALLCONV *gdxOpenReadFromRandomAccessEx_t) (gdxHandle_t pgdx, const gdx_random_access *Source, int ReadMode, int *ErrNr);
+/** Open a GDX file for reading from a random-access provider allowing for skipping sections. Non-zero if the source can be opened, zero otherwise.
+ *
+ * @param pgdx gdx object handle
+ * @param Source Random-access provider describing the underlying byte stream.
+ * @param ReadMode Bitmap skip reading sections: 0-bit: string (1 skip reading string).
+ * @param ErrNr Returns an error code or zero if there is no error.
+ * @return Returns non-zero if the random-access source can be used; zero otherwise.
+ */
+GDX_FUNCPTR(gdxOpenReadFromRandomAccessEx);
 
 typedef int  (GDX_CALLCONV *gdxOpenWrite_t) (gdxHandle_t pgdx, const char *FileName, const char *Producer, int *ErrNr);
 /** Open a new GDX file for output. Non-zero if the file can be opened, zero otherwise.

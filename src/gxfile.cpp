@@ -24,6 +24,7 @@
  */
 
 #include "gmsstrm.hpp" // for TMiBufferedStream, TXStream, File...
+#include "gdlib/random_access_native.hpp"
 #include "sysutils_p3.hpp" // for IntToStr
 
 #include "gdx.hpp"      // for TGXFileObj, TGXFileObj::stat_write
@@ -1717,9 +1718,25 @@ int TGXFileObj::gdxErrorStr( int ErrNr, char *ErrMsg ) const
    return true;
 }
 
+int TGXFileObj::gdxOpenReadFromRandomAccess( const gdx_random_access *Source, int &ErrNr )
+{
+   return gdxOpenReadFromRandomAccessEx( Source, 0, ErrNr );
+}
+
+int TGXFileObj::gdxOpenReadFromRandomAccessEx( const gdx_random_access *Source, int ReadMode, int &ErrNr )
+{
+   if( !Source )
+   {
+      ErrNr = ERR_PARAMETER;
+      LastError = ErrNr;
+      return false;
+   }
+   return gdxOpenReadXX( "<random-access>", fmOpenRead, ReadMode, ErrNr, Source );
+}
+
 int TGXFileObj::gdxOpenRead( const char *FileName, int &ErrNr )
 {
-   return gdxOpenReadXX( FileName, fmOpenRead, 0, ErrNr );
+   return gdxOpenReadXX( FileName, fmOpenRead, 0, ErrNr, nullptr );
 }
 
 int TGXFileObj::gdxFileVersion( char *FileStr, char *ProduceStr ) const
@@ -1850,7 +1867,7 @@ static inline std::string_view substr( const std::string_view s, int offset, int
    return ( s.empty() || offset > (int) s.size() - 1 ) ? std::string_view {} : s.substr( offset, len );
 }
 
-int TGXFileObj::gdxOpenReadXX( const char *Afn, int filemode, int ReadMode, int &ErrNr )
+int TGXFileObj::gdxOpenReadXX( const char *Afn, int filemode, int ReadMode, int &ErrNr, const gdx_random_access *randomSource )
 {
    if( fmode != f_not_open )
    {
@@ -1858,6 +1875,9 @@ int TGXFileObj::gdxOpenReadXX( const char *Afn, int filemode, int ReadMode, int 
       ErrNr = ERR_FILEALREADYOPEN;
       return false;
    }
+   const bool useRandomAccess = randomSource != nullptr;
+   const bool useNativeRandomAccess = !useRandomAccess && filemode == FileAccessMode::fmOpenRead;
+   const std::string debugName = useRandomAccess ? "<random-access>"s : ( Afn ? std::string( Afn ) : std::string {} );
    MajContext = "OpenRead"s;
    TraceLevel = defaultTraceLevel;
    fmode = f_not_open;
@@ -1867,7 +1887,7 @@ int TGXFileObj::gdxOpenReadXX( const char *Afn, int filemode, int ReadMode, int 
    if( verboseTrace && TraceLevel >= TraceLevels::trl_all )
    {
       // NOTE: Not covered by unit tests yet.
-      debugStream << "gdxOpenRead("s << Afn << ")\n"s;
+      debugStream << "gdxOpenRead("s << debugName << ")\n"s;
    }
 
    auto FileErrorNr = [&] {
@@ -1881,16 +1901,43 @@ int TGXFileObj::gdxOpenReadXX( const char *Afn, int filemode, int ReadMode, int 
       return FileErrorNr();
    };
 
-   if( Afn[0] == '\0' )
+   if( !useRandomAccess && ( !Afn || Afn[0] == '\0' ) )
    {
       // NOTE: Not covered by unit tests yet.
       ErrNr = ERR_NOFILE;
       return FileNoGood();
    }
-   FFile = std::make_unique<TMiBufferedStream>( Afn, filemode );
-   lastFileName = Afn;
-   ErrNr = FFile->GetLastIOResult();
-   if( ErrNr ) return FileNoGood();
+   if( !useRandomAccess )
+      lastFileName = debugName;
+
+   if( useRandomAccess )
+   {
+      if( !randomSource->read_at || !randomSource->get_size )
+      {
+         ErrNr = ERR_PARAMETER;
+         LastError = ErrNr;
+         return false;
+      }
+      auto provider = MakeRandomAccessProvider( *randomSource );
+      FFile = std::make_unique<TMiBufferedStream>( std::move( provider ), debugName );
+      lastFileName = debugName;
+      ErrNr = FFile->GetLastIOResult();
+      if( ErrNr ) return FileNoGood();
+   }
+   else if( useNativeRandomAccess )
+   {
+      auto provider = gdlib::random_access::CreateNativeRandomAccessProvider( debugName, static_cast<gdlib::gmsstrm::FileAccessMode>( filemode ), ErrNr );
+      if( !provider ) return FileNoGood();
+      FFile = std::make_unique<TMiBufferedStream>( std::move( provider ), debugName );
+      ErrNr = FFile->GetLastIOResult();
+      if( ErrNr ) return FileNoGood();
+   }
+   else
+   {
+      FFile = std::make_unique<TMiBufferedStream>( debugName, static_cast<uint16_t>( filemode ) );
+      ErrNr = FFile->GetLastIOResult();
+      if( ErrNr ) return FileNoGood();
+   }
    if( FFile->GoodByteOrder() )
    {
       // NOTE: Not covered by unit tests yet.
@@ -2705,7 +2752,7 @@ int TGXFileObj::gdxRenameUEL( const char *OldName, const char *NewName )
 
 int TGXFileObj::gdxOpenReadEx( const char *FileName, int ReadMode, int &ErrNr )
 {
-   return gdxOpenReadXX( FileName, FileAccessMode::fmOpenRead, ReadMode, ErrNr );
+   return gdxOpenReadXX( FileName, FileAccessMode::fmOpenRead, ReadMode, ErrNr, nullptr );
 }
 
 int TGXFileObj::gdxGetUEL( int uelNr, char *Uel ) const
@@ -3439,7 +3486,7 @@ int TGXFileObj::gdxOpenAppend( const char *FileName, const char *Producer, int &
 {
    FProducer2 = Producer;
    AppendActive = true;
-   const int res { gdxOpenReadXX( FileName, fmOpenReadWrite, 0, ErrNr ) };
+   const int res { gdxOpenReadXX( FileName, fmOpenReadWrite, 0, ErrNr, nullptr ) };
    if( !res || ErrNr != 0 ) return res;
    if( VersionRead < 7 )
    {
