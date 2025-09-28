@@ -137,6 +137,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #if defined(__IN_CPPMEX__)
 #define myexit _exit

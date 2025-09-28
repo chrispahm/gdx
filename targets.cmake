@@ -1,22 +1,25 @@
-# Dynamic library / shared object
-add_library(gdxcclib64 SHARED ${gdx-core} generated/gdxcclib.cpp)
-if (UNIX)
-    target_compile_options(gdxcclib64 PRIVATE -fvisibility=hidden)
-endif ()
-target_include_directories(gdxcclib64 PRIVATE ${inc-dirs})
-if (APPLE)
-    set(cclib-link-options "-Bdynamic")
-elseif (UNIX) # Linux
-    set(cclib-link-options "-Bdynamic -Wl,-Bsymbolic")
-else () # Windows
-    set(cclib-link-options "")
-endif ()
-target_link_libraries(gdxcclib64 ${mylibs} ${cclib-link-options})
-set_property(TARGET gdxcclib64 PROPERTY POSITION_INDEPENDENT_CODE ON)
+if(NOT EMSCRIPTEN)
+    # Dynamic library / shared object
+    add_library(gdxcclib64 SHARED ${gdx-core} generated/gdxcclib.cpp)
+    if (UNIX)
+        target_compile_options(gdxcclib64 PRIVATE -fvisibility=hidden)
+    endif ()
+    target_include_directories(gdxcclib64 PRIVATE ${inc-dirs})
+    if (APPLE)
+        set(cclib-link-options "-Bdynamic")
+    elseif (UNIX) # Linux
+        set(cclib-link-options "-Bdynamic -Wl,-Bsymbolic")
+    else () # Windows
+        set(cclib-link-options "")
+    endif ()
+    target_link_libraries(gdxcclib64 ${mylibs} ${cclib-link-options})
+    set_property(TARGET gdxcclib64 PROPERTY POSITION_INDEPENDENT_CODE ON)
+endif()
 
 # Static library
 add_library(gdx-static STATIC ${gdx-core})
 target_include_directories(gdx-static PRIVATE ${inc-dirs})
+target_link_libraries(gdx-static PRIVATE ${mylibs})
 set_property(TARGET gdx-static PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 set(NO_TESTS OFF CACHE BOOL "Skip building unit tests")
@@ -89,7 +92,7 @@ endif ()
 endif()
 
 set(NO_TOOLS OFF CACHE BOOL "Skip building GDX tools")
-if(NOT NO_TOOLS)
+if(NOT NO_TOOLS AND NOT EMSCRIPTEN)
 
 # Library for gdxdump, gdxdiff and gdxmerge
 add_library(gdxtools-library
@@ -139,4 +142,4 @@ add_executable(gdxmerge
 target_include_directories(gdxmerge PRIVATE ${inc-dirs})
 target_link_libraries(gdxmerge gdxtools-library)
 
-endif(NOT NO_TOOLS)
+endif(NOT NO_TOOLS AND NOT EMSCRIPTEN)

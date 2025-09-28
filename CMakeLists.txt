@@ -27,7 +27,11 @@ if(NOT DEFINED CMAKE_C_COMPILER_LAUNCHER AND NOT DEFINED CMAKE_CXX_COMPILER_LAUN
 	endif()
 endif()
 
-set(mylibs ${CMAKE_DL_LIBS} pthread m)
+if(EMSCRIPTEN)
+	set(mylibs "")
+else()
+	set(mylibs ${CMAKE_DL_LIBS} pthread m)
+endif()
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_SKIP_RPATH FALSE)
@@ -95,6 +99,19 @@ set(zlib-units
 		zlib/zutil.c
 )
 
+set(use-bundled-zlib ON)
+foreach(source_path IN LISTS zlib-units)
+	if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/${source_path})
+		set(use-bundled-zlib OFF)
+		break()
+	endif()
+endforeach()
+
+if(NOT use-bundled-zlib)
+	find_package(ZLIB REQUIRED)
+	list(APPEND mylibs ZLIB::ZLIB)
+endif()
+
 set(gdx-core
 		# P3 runtime library
 		src/rtl/dtoaLoc.h
@@ -125,9 +142,11 @@ set(gdx-core
 		src/gxfile.hpp
 		src/gxfile.cpp
 		src/gdx.hpp
-
-		${zlib-units}
 )
+
+if(use-bundled-zlib)
+	list(APPEND gdx-core ${zlib-units})
+endif()
 
 if(EMSCRIPTEN AND GDX_ENABLE_WASM_RANDOM_ACCESS)
 	list(APPEND gdx-core
@@ -156,6 +175,12 @@ set(tests
 		src/tests/rtl/sysutilsp3tests.cpp
 )
 
-set(inc-dirs zlib src generated src/gdlib src/global src/rtl)
+set(inc-dirs src generated src/gdlib src/global src/rtl)
+
+if(use-bundled-zlib)
+	list(APPEND inc-dirs zlib)
+elseif(ZLIB_FOUND)
+	list(APPEND inc-dirs ${ZLIB_INCLUDE_DIRS})
+endif()
 
 include(targets.cmake)
