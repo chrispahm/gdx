@@ -178,7 +178,7 @@
 # if defined(__INTEL_COMPILER_BUILD_DATE) && 0
 #   define Sudden_Underflow
 # endif
-#elif defined(__linux) || defined(__linux__) || defined(__APPLE__)
+#elif defined(__linux) || defined(__linux__) || defined(__APPLE__) || defined(__EMSCRIPTEN__)
 # define IEEE_8087
 #elif defined(__sparc) || (__HOS_AIX__)
 # define IEEE_MC68k

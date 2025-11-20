@@ -28,6 +28,7 @@ if(NOT DEFINED CMAKE_C_COMPILER_LAUNCHER AND NOT DEFINED CMAKE_CXX_COMPILER_LAUN
 endif()
 
 if(EMSCRIPTEN)
+	add_compile_definitions(DUCKDB_GDX_WASM)
 	set(mylibs "")
 else()
 	set(mylibs ${CMAKE_DL_LIBS} pthread m)
@@ -108,8 +109,25 @@ foreach(source_path IN LISTS zlib-units)
 endforeach()
 
 if(NOT use-bundled-zlib)
-	find_package(ZLIB REQUIRED)
-	list(APPEND mylibs ZLIB::ZLIB)
+	if(EMSCRIPTEN)
+		set(_emscripten_sysroot "${CMAKE_SYSROOT}")
+		if((_emscripten_sysroot STREQUAL "" OR NOT _emscripten_sysroot) AND DEFINED ENV{EMSDK})
+			set(_emscripten_sysroot "$ENV{EMSDK}/upstream/emscripten/cache/sysroot")
+		endif()
+
+		add_library(ZLIB::ZLIB INTERFACE IMPORTED)
+		set_target_properties(ZLIB::ZLIB PROPERTIES INTERFACE_LINK_OPTIONS "-sUSE_ZLIB=1")
+		if(_emscripten_sysroot)
+			set_target_properties(ZLIB::ZLIB PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${_emscripten_sysroot}/include")
+			set(ZLIB_INCLUDE_DIRS "${_emscripten_sysroot}/include")
+		endif()
+
+		list(APPEND mylibs ZLIB::ZLIB)
+		set(ZLIB_FOUND TRUE)
+	else()
+		find_package(ZLIB REQUIRED)
+		list(APPEND mylibs ZLIB::ZLIB)
+	endif()
 endif()
 
 set(gdx-core

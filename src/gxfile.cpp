@@ -177,8 +177,6 @@ const std::array fmode_str {
         "Read-Slice"s   //fr_slice
 };
 
-std::string DLLLoadPath {};
-
 constexpr int
         ERR_NOERROR = 0,
         ERR_NOFILE = -100000,

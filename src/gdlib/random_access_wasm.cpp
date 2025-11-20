@@ -11,6 +11,8 @@ namespace gdlib::random_access
 
 namespace
 {
+class WasmRandomAccessProvider;
+
 std::mutex &CallbackMutex()
 {
    static std::mutex g_mutex;

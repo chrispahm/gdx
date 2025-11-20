@@ -351,8 +351,6 @@ enum tvarvaltype : uint8_t
    valscale    // 5
 };
 
-extern std::string DLLLoadPath;// can be set by loader, so the "dll" knows where it is loaded from
-
 union uInt64
 {
    int64_t i;

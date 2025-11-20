@@ -28,3 +28,4 @@ Makefile
 libgdx-static.a
 libgdxcclib64.dylib
 /.venv/
+/build-wasm_2/

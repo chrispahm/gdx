@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "gdx.hpp"    // for TGXFileObj, DLLLoadPath, TDataStoreProc_t, TDat...
+#include "gdx.hpp"    // for TGXFileObj, TDataStoreProc_t, etc.
 #include <algorithm>// for min
 #include <cassert>  // for assert
 #include <cstring>  // for memcpy
@@ -54,11 +54,6 @@ typedef int( GDX_CALLCONV *TDataStoreFiltProc_t )( const int Indx[], const doubl
 typedef void( GDX_CALLCONV *TDomainIndexProc_t )( int RawIndex, int MappedIndex, void *Uptr );
 typedef int( GDX_CALLCONV *TDataStoreFiltProc_F_t )( const int Indx[], const double Vals[], long long *Uptr );
 typedef void( GDX_CALLCONV *TDomainIndexProc_F_t )( int *RawIndex, int *MappedIndex, void *Uptr );
-
-typedef void( GDX_CALLCONV *gdxSetLoadPath_t )( const char *s );
-typedef void( GDX_CALLCONV *gdxGetLoadPath_t )( char *s );
-extern gdxSetLoadPath_t gdxSetLoadPath;
-extern gdxGetLoadPath_t gdxGetLoadPath;
 
 #if defined(_WIN32)
 typedef __int64 INT64;
@@ -165,8 +160,6 @@ int gdxGetDomainElements( TGXFileRec_t *pgdx, int SyNr, int DimPos, int FilterNr
 int gdxCurrentDim( TGXFileRec_t *pgdx);
 int gdxRenameUEL( TGXFileRec_t *pgdx, const char *OldName, const char *NewName );
 
-void GDX_CALLCONV doSetLoadPath( const char *s );
-void GDX_CALLCONV doGetLoadPath( char *s );
 int gdxFree( TGXFileRec_t **pgdx );
 int gdxCreate( TGXFileRec_t **pgdx, char *errBuf, int bufSize );
 int gdxCreateD( TGXFileRec_t **pgdx, const char *sysDir, char *msgBuf, int msgBufLen );
@@ -179,22 +172,6 @@ int gdxMapAcronymsToNaN( TGXFileRec_t *pgdx);
 void gdxMapAcronymsToNaNSet( TGXFileRec_t *pgdx, int flag);
 void setCallByRef( TGXFileRec_t *TGXFile, const char *FuncName, int cbrValue );
 // PROTOTYPES END
-
-GDX_INLINE void GDX_CALLCONV doSetLoadPath( const char *s )
-{
-   gdx::DLLLoadPath.assign( s );
-}
-
-GDX_INLINE void GDX_CALLCONV doGetLoadPath( char *s )
-{
-   assert( gdx::DLLLoadPath.size() < 256 );
-   memcpy( s, gdx::DLLLoadPath.c_str(), gdx::DLLLoadPath.size() );
-}
-
-#ifndef NO_SET_LOAD_PATH_DEF
-gdxSetLoadPath_t gdxSetLoadPath = doSetLoadPath;
-gdxGetLoadPath_t gdxGetLoadPath = doGetLoadPath;
-#endif
 
 GDX_INLINE int gdxCreate( TGXFileRec_t **TGXFile, char *errBuf, int bufSize )
 {
@@ -722,7 +699,8 @@ GDX_INLINE int gdxFree( TGXFileRec_t **TGXFile )
 
 GDX_INLINE int gdxCreateD( TGXFileRec_t **TGXFile, const char *sysDir, char *msgBuf, int msgBufLen )
 {
-   doSetLoadPath( sysDir );
+   // sysDir parameter is now unused (legacy compatibility)
+   (void)sysDir;
    return gdxCreate( TGXFile, msgBuf, msgBufLen );
 }
 
