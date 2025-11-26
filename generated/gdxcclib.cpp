@@ -949,15 +949,15 @@ GDX_API int GDX_CALLCONV D__gdxXCheck(const unsigned char *funcn, int ClNrArg, i
 } /* D__gdxXCheck */
 
 
-GDX_API void GDX_CALLCONV C__gdxSetLoadPath(const char *s);
-GDX_API void GDX_CALLCONV C__gdxSetLoadPath(const char *s) {
-   gdxSetLoadPath(s);
-} /* C__gdxSetLoadPath */
+// GDX_API void GDX_CALLCONV C__gdxSetLoadPath(const char *s);
+// GDX_API void GDX_CALLCONV C__gdxSetLoadPath(const char *s) {
+//    gdxSetLoadPath(s);
+// } /* C__gdxSetLoadPath */
 
-GDX_API void GDX_CALLCONV C__gdxGetLoadPath(char *s);
-GDX_API void GDX_CALLCONV C__gdxGetLoadPath(char *s) {
-   gdxGetLoadPath(s);
-} /* C__gdxGetLoadPath */
+// GDX_API void GDX_CALLCONV C__gdxGetLoadPath(char *s);
+// GDX_API void GDX_CALLCONV C__gdxGetLoadPath(char *s) {
+//    gdxGetLoadPath(s);
+// } /* C__gdxGetLoadPath */
 
 #ifndef APICHECKONLY
 
