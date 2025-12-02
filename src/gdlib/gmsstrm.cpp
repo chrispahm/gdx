@@ -126,7 +126,7 @@ enum CustomOpenAction : uint8_t
 };
 
 constexpr uint8_t signature_header = 0xFF;
-const std::string signature_gams = "*GAMS*"s;
+constexpr const char* signature_gams = "*GAMS*";
 constexpr int verify_offset = 100;
 
 constexpr static char substChar { 0x1A };

@@ -142,39 +142,38 @@ using UELTableImplChoice = TUELTable;
 //      relaxed domains
 constexpr int  VERSION = 7,    //--file version
                gdxHeaderNr = 123;//--patterns to recognize
-const std::string gdxHeaderId = "GAMSGDX";
+constexpr const char* gdxHeaderId = "GAMSGDX";
 
 constexpr int MARK_BOI = 19510624;
 
-const std::string
-        MARK_UEL = "_UEL_"s,
-        MARK_SYMB = "_SYMB_"s,
-        MARK_DATA = "_DATA_"s,
-        MARK_SETT = "_SETT_"s,
-        MARK_ACRO = "_ACRO_"s,
-        MARK_DOMS = "_DOMS_"s;
+constexpr const char* MARK_UEL = "_UEL_";
+constexpr const char* MARK_SYMB = "_SYMB_";
+constexpr const char* MARK_DATA = "_DATA_";
+constexpr const char* MARK_SETT = "_SETT_";
+constexpr const char* MARK_ACRO = "_ACRO_";
+constexpr const char* MARK_DOMS = "_DOMS_";
 
 constexpr int INDEX_INITIAL = -256;
 
-const std::array fmode_str {
-        "FileNotOpen"s, //f_not_open
-        "ReadCommand"s, //fr_init
-        "WriteCommand"s,//fw_init
-        "Write-Dom-Raw"s,
-        "Write-Dom-Map"s,
-        "Write-Dom-Str"s,
-        "Write-Raw"s,   //fw_raw_data
-        "Write-Map"s,   //fw_Map_data
-        "Write-Str"s,   //fw_str_data
-        "Regis-Raw"s,   //f_raw_elem
-        "Regis-Map"s,   //f_Map_elem
-        "Regis-Str"s,   //f_str_elem
-        "Read-Raw"s,    //fr_raw_data
-        "Read-Map"s,    //fr_Map_data
-        "Read_MapR"s,   //fr_MapR_data
-        "Read-Str"s,    //fr_str_data
-        "Regis-Filter"s,//fr_filter
-        "Read-Slice"s   //fr_slice
+constexpr const char* fmode_str[] = {
+        "FileNotOpen", //f_not_open
+        "ReadCommand", //fr_init
+        "WriteCommand",//fw_init
+        "Write-Dom-Raw",
+        "Write-Dom-Map",
+        "Write-Dom-Str",
+        "Write-Raw",   //fw_raw_data
+        "Write-Map",   //fw_Map_data
+        "Write-Str",   //fw_str_data
+        "Regis-Raw",   //f_raw_elem
+        "Regis-Map",   //f_Map_elem
+        "Regis-Str",   //f_str_elem
+        "Read-Raw",    //fr_raw_data
+        "Read-Map",    //fr_Map_data
+        "Read_MapR",   //fr_MapR_data
+        "Read-Str",    //fr_str_data
+        "Regis-Filter",//fr_filter
+        "Read-Slice"   //fr_slice
 };
 
 constexpr int

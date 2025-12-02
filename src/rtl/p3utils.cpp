@@ -839,7 +839,10 @@ bool p3WritableLocation( Tp3Location locType, const std::string &appName, std::s
 }
 #endif
 
-const std::string zeros {std::string( 54, '0' )};
+static const std::string& getZeros() {
+   static const std::string zeros(54, '0');
+   return zeros;
+}
 
 int p3Chmod( const std::string &path, int mode )
 {

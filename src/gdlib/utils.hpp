@@ -58,7 +58,9 @@
 #if !defined(NDEBUG) || defined(__IN_CPPMEX__)
 #define debugStream std::cout
 #else
-extern std::stringstream debugStream;
+// Use lazy initialization to avoid static initialization issues in WASM
+std::stringstream &getDebugStream();
+#define debugStream getDebugStream()
 #endif
 
 namespace utils

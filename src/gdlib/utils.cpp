@@ -48,7 +48,11 @@ using namespace std::literals::string_literals;
 // Implementation
 // ==============================================================================================================
 #if defined(NDEBUG) && !defined(__IN_CPPMEX__)
-std::stringstream debugStream;
+// Lazy initialization to avoid static initialization issues in WASM
+std::stringstream &getDebugStream() {
+   static std::stringstream stream;
+   return stream;
+}
 #endif
 
 namespace utils
