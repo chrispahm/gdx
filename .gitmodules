@@ -1,3 +1,4 @@
 [submodule "src/apigenerator"]
 	path = src/apigenerator
-	url = ../apigenerator.git
+	url = https://github.com/GAMS-dev/apigenerator
+	
