@@ -2,3 +2,6 @@
 	path = src/apigenerator
 	url = https://github.com/GAMS-dev/apigenerator
 	
+[submodule "zlib"]
+	path = zlib
+	url = https://github.com/madler/zlib.git
